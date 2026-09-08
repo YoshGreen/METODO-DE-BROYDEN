@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Método de Broyden</title>
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0e1420;
+            --text-color: #e8eef7;
+            --accent-blue: #4da3ff;
+            --accent-gold: #ffc857;
+            --accent-green: #4ade80;
+            --box-bg: rgba(255, 255, 255, 0.05);
+            --font-base: calc(10px + 0.85vw);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: var(--font-base);
+            overflow: hidden;
+            line-height: 1.5;
+        }
+
+        .presentation {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 4rem 10%;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        h1, h2, h3 {
+            color: var(--accent-gold);
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 2em;
+            border-bottom: 2px solid var(--accent-blue);
+            padding-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--accent-blue);
+            font-size: 1.2em;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .center {
+            text-align: center;
+            margin: auto;
+        }
+
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.75rem;
+        }
+
+        .box {
+            background-color: var(--box-bg);
+            border-left: 4px solid var(--accent-blue);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .box.highlight {
+            border-color: var(--accent-gold);
+        }
+
+        .box.success {
+            border-color: var(--accent-green);
+        }
+
+        .equation-box {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--accent-blue);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            margin: 1.5rem 0;
+            font-size: 1.2em;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 1rem;
+            align-items: center;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--box-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .card .icon {
+            font-size: 2.5em;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        th {
+            color: var(--accent-gold);
+            border-bottom: 2px solid var(--accent-blue);
+        }
+
+        img {
+            max-width: 100%;
+            max-height: 60vh;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+
+        .code-block {
+            background: #000;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            color: var(--accent-green);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* UI Elements */
+        .controls {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        button {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: var(--accent-blue);
+        }
+
+        .progress-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: rgba(255,255,255,0.1);
+            z-index: 100;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-blue);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .slide-counter {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 2rem;
+            font-size: 0.9em;
+            color: rgba(255,255,255,0.5);
+            z-index: 100;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            z-index: 200;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .overlay.active {
+            display: flex;
+        }
+
+        .overlay-content {
+            background: var(--bg-color);
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid var(--accent-blue);
+            max-width: 80%;
+        }
+
+        /* Grid View */
+        body.grid-view .presentation {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        body.grid-view .slide {
+            position: relative;
+            opacity: 1;
+            visibility: visible;
+            transform: none;
+            padding: 1rem;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            height: 200px;
+            overflow: hidden;
+            font-size: 0.4em;
+        }
+
+        body.grid-view .slide:hover, body.grid-view .slide.active {
+            border-color: var(--accent-blue);
+        }
+
+        body.grid-view .controls, body.grid-view .progress-container, body.grid-view .slide-counter {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="presentation" id="presentation">
+        
+        <!-- Slide 1 -->
+        <section class="slide">
+            <div class="center" style="margin-top: 10vh;">
+                <p style="color: var(--accent-blue); font-size: 1.2em; margin-bottom: 2rem;">
+                    Universidad Mayor de San Andrés<br>
+                    Facultad de Ciencias Puras y Naturales
+                </p>
+                <p style="font-size: 1.5em; margin-bottom: 1rem;">Métodos Numéricos II (DAT-252)</p>
+                <h1 style="font-size: 4em; margin: 2rem 0; color: var(--accent-gold);">Método de Broyden</h1>
+                
+                <div class="box" style="display: inline-block; text-align: left; margin-bottom: 2rem;">
+                    <p><strong>Estudiantes:</strong> Cordova Avendaño Yoshua Aaron · Sempertegui Flores Erick Sebastian</p>
+                    <p><strong>Docente:</strong> M.Sc. Carlos Mullisaca Choque</p>
+                </div>
+                
+                <p style="color: rgba(255,255,255,0.5);">Septiembre 2026</p>
+            </div>
+        </section>
+
+        <!-- Slide 2 -->
+        <section class="slide">
+            <h2>Encontrar raíces de un sistema no lineal</h2>
+            
+            <p>El problema fundamental consiste en resolver un sistema de ecuaciones no lineales simultáneas.</p>
+            
+            <div class="box">
+                <p>Dada una función vectorial \( F: \mathbb{R}^n \to \mathbb{R}^n \), encontrar un vector \( \mathbf{x}^* \) tal que:</p>
+            </div>
+            
+            <div class="equation-box">
+                \[ F(\mathbf{x}^*) = \mathbf{0} \]
+            </div>
+            
+            <p><strong>Ejemplos de aplicación:</strong></p>
+            <ul>
+                <li>Equilibrio en circuitos eléctricos (nodos)</li>
+                <li>Reacciones químicas (equilibrio de masas)</li>
+                <li>Análisis estructural (grandes deformaciones)</li>
+            </ul>
+        </section>
+
+        <!-- Slide 3 -->
+        <section class="slide">
+            <h2>Newton-Raphson: la intuición geométrica</h2>
+            
+            <p>En 1D, la idea es usar la recta tangente a la curva en el punto actual para estimar la raíz.</p>
+            
+            <div class="equation-box">
+                \[ x_{k+1} = x_k - \frac{f(x_k)}{f'(x_k)} \]
+            </div>
+            
+            <div class="box highlight">
+                <strong>Idea clave:</strong> Seguir la tangente hasta encontrar dónde cruza el eje de abscisas (el cero).
+            </div>
+            
+            <ul>
+                <li><strong>Convergencia:</strong> Es <em>cuadrática</em>.</li>
+                <li>Duplica el número de dígitos correctos en cada paso, siempre que estemos cerca de la solución.</li>
+            </ul>
+        </section>
+
+        <!-- Slide 4 -->
+        <section class="slide">
+            <h2>Del escalar al sistema: el Jacobiano</h2>
+            
+            <p>En múltiples dimensiones, la derivada escalar \( f'(x) \) se convierte en la <strong>Matriz Jacobiana</strong> \( J(\mathbf{x}) \).</p>
+            
+            <div class="box">
+                Para un sistema de \( n \) ecuaciones, necesitamos evaluar \( n^2 \) derivadas parciales:
+                \[ J_{ij} = \frac{\partial F_i}{\partial x_j} \]
+            </div>
+            
+            <p>Ejemplo concreto 2×2:</p>
+            <div class="grid-2">
+                <div>
+                    \[ F(\mathbf{x}) = \begin{bmatrix} x^2 + y^2 - 4 \\ xy - 1 \end{bmatrix} \]
+                </div>
+                <div>
+                    \[ J(\mathbf{x}) = \begin{bmatrix} 2x & 2y \\ y & x \end{bmatrix} \]
+                </div>
+            </div>
+            <p style="margin-top: 1rem; text-align: center; color: var(--accent-blue);">Cada fila es el gradiente de una ecuación.</p>
+        </section>
+
+        <!-- Slide 5 -->
+        <section class="slide">
+            <h2>Newton multidimensional: potente pero costoso</h2>
+            
+            <p>El paso de Newton en \( n \) dimensiones requiere resolver un sistema lineal en cada iteración:</p>
+            
+            <div class="equation-box">
+                \[ J(\mathbf{x}_k) \mathbf{s}_k = -F(\mathbf{x}_k) \]
+                \[ \mathbf{x}_{k+1} = \mathbf{x}_k + \mathbf{s}_k \]
+            </div>
+            
+            <h3>Desglose del costo computacional</h3>
+            <table>
+                <tr>
+                    <th>Operación</th>
+                    <th>Costo</th>
+                </tr>
+                <tr>
+                    <td>Evaluar el Jacobiano \( J \)</td>
+                    <td>\( n^2 \) derivadas parciales funcionales</td>
+                </tr>
+                <tr>
+                    <td>Resolver el sistema lineal</td>
+                    <td>\( \mathcal{O}(n^3) \) operaciones aritméticas</td>
+                </tr>
+                <tr style="color: var(--accent-gold); font-weight: bold;">
+                    <td>Total por iteración</td>
+                    <td>\( \mathcal{O}(n^3) \)</td>
+                </tr>
+            </table>
+            
+            <div class="box highlight" style="margin-top:0;">
+                Para \( n=1000 \): ¡1 millón de derivadas y mil millones de operaciones <strong>POR PASO</strong>!
+            </div>
+        </section>
+
+        <!-- Slide 6 -->
+        <section class="slide">
+            <h2>¿Dónde aparecen estos sistemas?</h2>
+            
+            <p>Los sistemas no lineales grandes aparecen en casi todas las áreas de la ciencia y la ingeniería.</p>
+            
+            <div class="grid-4" style="margin-top: 2rem;">
+                <div class="card">
+                    <span class="icon">🤖</span>
+                    <h3>Robótica</h3>
+                    <p>Cinemática inversa (encontrar ángulos de articulaciones para una posición objetivo).</p>
+                </div>
+                <div class="card">
+                    <span class="icon">⚡</span>
+                    <h3>Redes Eléctricas</h3>
+                    <p>Flujo de carga, leyes de Kirchhoff no lineales.</p>
+                </div>
+                <div class="card">
+                    <span class="icon">🔥</span>
+                    <h3>Combustión</h3>
+                    <p>Ecuación de Bratu, reacciones altamente exotérmicas.</p>
+                </div>
+                <div class="card">
+                    <span class="icon">🏗️</span>
+                    <h3>Estructuras</h3>
+                    <p>Análisis de deformación no lineal de materiales elásticos o plásticos.</p>
+                </div>
+            </div>
+            
+            <p style="text-align: center; margin-top: 2rem; color: var(--accent-gold);">Todos se reducen a \( F(\mathbf{x}) = 0 \) con \( n \) desde decenas hasta millones.</p>
+        </section>
+
+        <!-- Slide 7 -->
+        <section class="slide">
+            <h2>La idea de Broyden (1965): la secante generalizada</h2>
+            
+            <p>En 1D, aproximamos la derivada: \( f'(x) \approx \frac{\Delta f}{\Delta x} \).</p>
+            <p>En \( n \) dimensiones, buscamos una matriz \( B_{k+1} \) que satisfaga la <strong>ecuación de la secante</strong>:</p>
+            
+            <div class="equation-box">
+                \[ B_{k+1} \mathbf{s}_k = \mathbf{y}_k \]
+            </div>
+            
+            <p>Donde:</p>
+            <ul>
+                <li>\( \mathbf{s}_k = \mathbf{x}_{k+1} - \mathbf{x}_k \) (cambio en x)</li>
+                <li>\( \mathbf{y}_k = F(\mathbf{x}_{k+1}) - F(\mathbf{x}_k) \) (cambio en F)</li>
+            </ul>
+            
+            <div class="box highlight">
+                <strong>El problema:</strong> Tenemos UNA ecuación (vectorial) para \( n^2 \) incógnitas de la matriz. Hay infinitas soluciones.
+                <br><br>
+                <strong>La elección de Broyden:</strong> Cambiar \( B_k \) lo menos posible (minimizar la norma de Frobenius).
+            </div>
+        </section>
+
+        <!-- Slide 8 -->
+        <section class="slide">
+            <h2>La fórmula de actualización de Broyden</h2>
+            
+            <p>A partir del problema de optimización:</p>
+            <p style="text-align: center; margin-bottom: 1rem;">Minimizar \( \|B_{k+1} - B_k\|_F \) sujeto a \( B_{k+1} \mathbf{s}_k = \mathbf{y}_k \)</p>
+            
+            <p>La solución es la famosa actualización de Broyden:</p>
+            
+            <div class="equation-box" style="border-color: var(--accent-gold);">
+                \[ B_{k+1} = B_k + \frac{(\mathbf{y}_k - B_k \mathbf{s}_k) \mathbf{s}_k^T}{\mathbf{s}_k^T \mathbf{s}_k} \]
+            </div>
+            
+            <div class="box">
+                <ul>
+                    <li>Es una actualización de <strong>RANGO 1</strong>.</li>
+                    <li>Modifica \( B_k \) únicamente en la dirección del paso \( \mathbf{s}_k \).</li>
+                    <li>Toda la información acumulada en direcciones ortogonales se preserva intacta.</li>
+                    <li><strong>Costo:</strong> \( \mathcal{O}(n^2) \) (un producto exterior vectorial).</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Slide 9 -->
+        <section class="slide">
+            <h2>Sherman-Morrison: de \( \mathcal{O}(n^3) \) a \( \mathcal{O}(n^2) \)</h2>
+            
+            <p>Aún necesitamos resolver \( B_{k+1} \Delta \mathbf{x} = -F \), lo cual sigue siendo \( \mathcal{O}(n^3) \).</p>
+            
+            <p><strong>Solución:</strong> Mantener y actualizar directamente la matriz inversa \( H_k \approx B_k^{-1} \) usando la fórmula de Sherman-Morrison:</p>
+            
+            <div class="equation-box">
+                \[ H_{k+1} = H_k + \frac{(\mathbf{s}_k - H_k \mathbf{y}_k)\mathbf{s}_k^T H_k}{\mathbf{s}_k^T H_k \mathbf{y}_k} \]
+            </div>
+            
+            <p>Entonces, calcular el paso es solo una multiplicación matriz-vector:</p>
+            <div style="text-align: center; font-size: 1.5em; color: var(--accent-green); margin: 1rem 0;">
+                \( \Delta \mathbf{x} = -H_k F(\mathbf{x}_k) \) &nbsp; &nbsp; <small>¡\( \mathcal{O}(n^2) \)!</small>
+            </div>
+            
+            <table style="width: 80%; margin: 1rem auto;">
+                <tr>
+                    <th>Método</th>
+                    <th>Costo por Iteración</th>
+                </tr>
+                <tr>
+                    <td>Newton-Raphson</td>
+                    <td style="color: #ff6b6b;">\( \mathcal{O}(n^3) \)</td>
+                </tr>
+                <tr>
+                    <td>Broyden (con S-M)</td>
+                    <td style="color: var(--accent-green);">\( \mathcal{O}(n^2) \)</td>
+                </tr>
+            </table>
+        </section>
+
+        <!-- Slide 10 -->
+        <section class="slide">
+            <h2>Algoritmo de Broyden — Pseudocódigo</h2>
+            
+            <div class="code-block">
+1. Elegir estimación inicial x₀
+2. Inicializar H₀ = J(x₀)⁻¹  (o H₀ = I)
+3. Evaluar F₀ = F(x₀)
+4. Para k = 0, 1, 2, ... hasta que ||Fₖ|| < tol:
+   
+   a. sₖ = -Hₖ Fₖ                      // O(n²) mul matriz-vector
+   b. xₖ₊₁ = xₖ + sₖ
+   
+   c. Fₖ₊₁ = F(xₖ₊₁)                   // ¡Solo 1 evaluación de F!
+   d. yₖ = Fₖ₊₁ - Fₖ
+   
+   e. Actualizar Hₖ₊₁ (Sherman-Morrison) // O(n²)
+            </div>
+            
+            <div class="box success" style="margin-top: 1.5rem;">
+                <strong>Destacado:</strong> Solo se requiere <strong>1 evaluación</strong> de la función vectorial por iteración, y <strong>NINGÚN</strong> cálculo del Jacobiano después de la inicialización.
+            </div>
+        </section>
+
+        <!-- Slide 11 -->
+        <section class="slide">
+            <h2>Convergencia superlineal (Dennis-Moré, 1977)</h2>
+            
+            <div class="grid-2">
+                <div class="box">
+                    <h3 style="color: white; border-bottom: 1px solid gray; padding-bottom: 0.5rem;">Newton</h3>
+                    <p>\[ \|e_{k+1}\| \leq C \|e_k\|^2 \]</p>
+                    <p style="color: var(--accent-blue);">Convergencia cuadrática (\( p=2 \))</p>
+                    <p><small>Duplica los dígitos correctos en cada paso.</small></p>
+                </div>
+                <div class="box highlight">
+                    <h3 style="color: white; border-bottom: 1px solid gray; padding-bottom: 0.5rem;">Broyden</h3>
+                    <p>\[ \frac{\|e_{k+1}\|}{\|e_k\|} \to 0 \]</p>
+                    <p style="color: var(--accent-gold);">Convergencia superlineal (\( 1 < p < 2 \))</p>
+                    <p><small>Acelera progresivamente, pero no duplica dígitos.</small></p>
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem;">
+                <p><strong>Condición de Dennis-Moré:</strong></p>
+                <div class="equation-box">
+                    \[ \lim_{k \to \infty} \frac{\|(B_k - J(\mathbf{x}^*)) \mathbf{s}_k\|}{\|\mathbf{s}_k\|} = 0 \]
+                </div>
+                <p style="text-align: center; font-size: 0.9em;">
+                    \( B_k \) converge a \( J(\mathbf{x}^*) \) <strong>ÚNICAMENTE</strong> a lo largo de las direcciones de los pasos, no en todas las direcciones del espacio.
+                </p>
+            </div>
+        </section>
+
+        <!-- Slide 12 -->
+        <section class="slide">
+            <h2>Broyden vs Newton-Krylov: dos filosofías</h2>
+            
+            <p>Ambos métodos evitan el costo \( \mathcal{O}(n^3) \) de Newton, pero con diferentes enfoques.</p>
+            
+            <table>
+                <tr>
+                    <th>Característica</th>
+                    <th>Broyden (Cuasi-Newton)</th>
+                    <th>Newton-Krylov (JFNK)</th>
+                </tr>
+                <tr>
+                    <td><strong>Evita</strong></td>
+                    <td>Recalcular el Jacobiano \( J \)</td>
+                    <td>Formar/almacenar el Jacobiano \( J \)</td>
+                </tr>
+                <tr>
+                    <td><strong>Aproxima</strong></td>
+                    <td>\( J \) con actualizaciones de rango 1</td>
+                    <td>\( J \cdot v \) con diferencias finitas</td>
+                </tr>
+                <tr>
+                    <td><strong>Costo / iter</strong></td>
+                    <td>\( \mathcal{O}(n^2) \)</td>
+                    <td>\( \mathcal{O}(n) \) por iteración de Krylov</td>
+                </tr>
+                <tr>
+                    <td><strong>Almacena</strong></td>
+                    <td>Matriz densa \( H_k \) (\( n \times n \))</td>
+                    <td>Solo vectores de estado</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--accent-gold);"><strong>Ideal para</strong></td>
+                    <td style="color: var(--accent-gold);">Sistemas medianos densos</td>
+                    <td style="color: var(--accent-gold);">Sistemas muy grandes y dispersos</td>
+                </tr>
+            </table>
+        </section>
+
+        <!-- Slide 13 -->
+        <section class="slide">
+            <h2>Ej. 1 — Intersección de curvas geométricas</h2>
+            
+            <div class="grid-2">
+                <div>%
+                    <img src="/figuras/ej1_trayectorias.png" alt="Trayectorias Ejercicio 1" style="background: white; padding: 10px;">
+                    <p style="text-align: center; font-size: 0.8em; margin-top: 10px;">
+                        Sistema: \( x^2+y^2=4 \) (círculo), \( xy=1 \) (hipérbola)
+                    </p>
+                </div>
+                <div>
+                    <div class="box">
+                        <h3 style="margin-top: 0;">Conclusiones</h3>
+                        <ul>
+                            <li><strong>Newton:</strong> converge en ~5 iteraciones, pero requiere evaluar y calcular \( J \) analíticamente en cada paso.</li>
+                            <li><strong>Broyden:</strong> converge en ~7 iteraciones, pero evalúa \( J \) <strong>solo una vez</strong> al inicio.</li>
+                            <li>Ambos algoritmos alcanzan exitosamente la misma solución \( \mathbf{x}^* \approx (1.93, 0.52) \).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 14 -->
+        <section class="slide">
+            <h2>Ej. 2 — Verificación del orden de convergencia</h2>
+            
+            <div class="grid-2">
+                <div>
+                    <img src="/figuras/ej2_convergencia_superlineal.png" alt="Convergencia Superlineal" style="background: white; padding: 10px;">
+                </div>
+                <div>
+                    <div class="box">
+                        <h3 style="margin-top: 0;">Conclusiones empíricas</h3>
+                        <ul>
+                            <li><strong>Newton:</strong> El orden \( p_k \) se estabiliza rápidamente cerca de 2 (convergencia cuadrática perfecta).</li>
+                            <li><strong>Broyden:</strong> El orden \( p_k \) oscila entre 1 y 2, promediando aproximadamente <strong>~1.6</strong> (convergencia superlineal).</li>
+                            <li>Este comportamiento confirma experimentalmente las predicciones teóricas del teorema de Dennis-Moré.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 15 -->
+        <section class="slide">
+            <h2>Ej. 3 — Brazo robótico de 3 eslabones</h2>
+            
+            <div class="grid-2">
+                <div>
+                    <img src="/figuras/ej3_brazo_robotico.png" alt="Brazo Robótico" style="background: white; padding: 10px;">
+                    <p style="text-align: center; font-size: 0.8em; margin-top: 10px;">
+                        Problema: hallar ángulos articulares \( (\theta_1, \theta_2, \theta_3) \) para alcanzar posición objetivo.
+                    </p>
+                </div>
+                <div>
+                    <div class="box success">
+                        <h3 style="margin-top: 0;">Conclusiones</h3>
+                        <ul>
+                            <li>Broyden resuelve la cinemática inversa <strong>sin necesidad de derivar analíticamente el Jacobiano cinemático</strong>.</li>
+                            <li>Convergencia rápida: el efector final alcanza el objetivo con un error espacial \( < 10^{-8} \).</li>
+                            <li>Aplicación directa de alto impacto en robótica de manipulación y animación 3D procedural.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 16 -->
+        <section class="slide">
+            <h2>Ej. 4 — Escalabilidad en sistemas grandes</h2>
+            
+            <div class="grid-2">
+                <div>
+                    <img src="/figuras/ej4_escalabilidad.png" alt="Escalabilidad" style="background: white; padding: 10px;">
+                    <p style="text-align: center; font-size: 0.8em; margin-top: 10px;">
+                        Problema: Ecuación de Bratu \( -u'' + \lambda e^u = 0 \) discretizada.
+                    </p>
+                </div>
+                <div>
+                    <div class="box">
+                        <h3 style="margin-top: 0;">Conclusiones</h3>
+                        <ul>
+                            <li>Para <strong>n pequeño</strong>, Newton es más rápido en tiempo total (requiere muchas menos iteraciones).</li>
+                            <li>Para <strong>n grande</strong>, Broyden supera ampliamente a Newton en tiempo total de ejecución.</li>
+                            <li>El "speedup" crece con \( n \): la abismal ventaja teórica de \( \mathcal{O}(n^2) \) vs \( \mathcal{O}(n^3) \) por iteración se hace evidente empíricamente.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 17 -->
+        <section class="slide">
+            <h2>Conclusiones Generales</h2>
+            
+            <div class="grid-2" style="font-size: 0.9em; gap: 1rem;">
+                <div class="box" style="margin: 0.5rem 0; padding: 1rem;">
+                    1. Broyden logra una <strong>precisión comparable</strong> a Newton con un costo computacional por iteración drásticamente menor.
+                </div>
+                <div class="box" style="margin: 0.5rem 0; padding: 1rem;">
+                    2. La convergencia <strong>superlineal</strong> (ni lineal ni cuadrática pura) fue confirmada experimentalmente (\( p \approx 1.6 \)).
+                </div>
+                <div class="box" style="margin: 0.5rem 0; padding: 1rem;">
+                    3. La fórmula de <strong>Sherman-Morrison</strong> es el corazón del método, reduciendo el costo de resolver el sistema de \( \mathcal{O}(n^3) \) a \( \mathcal{O}(n^2) \).
+                </div>
+                <div class="box" style="margin: 0.5rem 0; padding: 1rem;">
+                    4. La ventaja de escalabilidad temporal se hace <strong>dramática</strong> en sistemas grandes (alto \( n \)).
+                </div>
+                <div class="box" style="margin: 0.5rem 0; padding: 1rem; border-color: var(--accent-green);">
+                    5. Aplicaciones prácticas, como la cinemática en <strong>robótica</strong>, se benefician enormemente de evitar el cálculo explícito del Jacobiano.
+                </div>
+                <div class="box" style="margin: 0.5rem 0; padding: 1rem; border-color: var(--accent-gold);">
+                    6. <strong>Analogía:</strong> Newton es el velocista (pocas zancadas muy costosas); Broyden es el fondista (pasos económicos, gana en la distancia).
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 18 -->
+        <section class="slide">
+            <div class="center" style="margin-top: 20vh;">
+                <h1 style="font-size: 5em; margin-bottom: 0;">¿Preguntas?</h1>
+                <p class="subtitle" style="font-size: 1.5em; margin-top: 1rem;">Método de Broyden — Métodos Numéricos II</p>
+                
+                <div style="margin-top: 15vh; font-size: 0.8em; color: rgba(255,255,255,0.4);">
+                    <p><strong>Referencias principales:</strong></p>
+                    <p>Broyden, C. G. (1965). A class of methods for solving nonlinear simultaneous equations. <em>Mathematics of computation</em>, 19(92), 577-593.</p>
+                    <p>Dennis, J. E., & Moré, J. J. (1977). Quasi-Newton methods, motivation and theory. <em>SIAM review</em>, 19(1), 46-89.</p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- UI Controls -->
+    <div class="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    
+    <div class="slide-counter" id="slide-counter">1 / 18</div>
+    
+    <div class="controls">
+        <button id="btn-prev" title="Anterior (←)">◀</button>
+        <button id="btn-grid" title="Vista de cuadrícula (G)">⊞</button>
+        <button id="btn-help" title="Ayuda (?)">?</button>
+        <button id="btn-next" title="Siguiente (→)">▶</button>
+    </div>
+
+    <!-- Help Overlay -->
+    <div class="overlay" id="help-overlay">
+        <div class="overlay-content">
+            <h2 style="margin-top: 0; text-align: center;">Atajos de teclado</h2>
+            <table style="margin-bottom: 0;">
+                <tr><td><kbd>→</kbd> o <kbd>Espacio</kbd> o <kbd>AvPág</kbd></td><td>Siguiente diapositiva</td></tr>
+                <tr><td><kbd>←</kbd> o <kbd>RePág</kbd></td><td>Diapositiva anterior</td></tr>
+                <tr><td><kbd>Inicio</kbd></td><td>Ir a la primera diapositiva</td></tr>
+                <tr><td><kbd>Fin</kbd></td><td>Ir a la última diapositiva</td></tr>
+                <tr><td><kbd>G</kbd></td><td>Alternar vista de cuadrícula</td></tr>
+                <tr><td><kbd>?</kbd></td><td>Mostrar/ocultar esta ayuda</td></tr>
+                <tr><td><kbd>Esc</kbd></td><td>Cerrar vistas o salir</td></tr>
+            </table>
+            <div style="text-align: center; margin-top: 1rem;">
+                <button id="btn-close-help">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KaTeX and Scripts -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const slides = document.querySelectorAll('.slide');
+            const totalSlides = slides.length;
+            let currentSlide = 0;
+            
+            const progressBar = document.getElementById('progress-bar');
+            const slideCounter = document.getElementById('slide-counter');
+            
+            // DOM Elements for UI
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+            const btnGrid = document.getElementById('btn-grid');
+            const btnHelp = document.getElementById('btn-help');
+            const btnCloseHelp = document.getElementById('btn-close-help');
+            const helpOverlay = document.getElementById('help-overlay');
+            
+            function updateSlide() {
+                slides.forEach((slide, index) => {
+                    slide.classList.toggle('active', index === currentSlide);
+                });
+                
+                progressBar.style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+                slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+            
+            function nextSlide() {
+                if (currentSlide < totalSlides - 1) {
+                    currentSlide++;
+                    updateSlide();
+                }
+            }
+            
+            function prevSlide() {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    updateSlide();
+                }
+            }
+            
+            function toggleGrid() {
+                document.body.classList.toggle('grid-view');
+            }
+            
+            function toggleHelp() {
+                helpOverlay.classList.toggle('active');
+            }
+            
+            // Event Listeners for Buttons
+            btnPrev.addEventListener('click', prevSlide);
+            btnNext.addEventListener('click', nextSlide);
+            btnGrid.addEventListener('click', toggleGrid);
+            btnHelp.addEventListener('click', toggleHelp);
+            btnCloseHelp.addEventListener('click', toggleHelp);
+            helpOverlay.addEventListener('click', (e) => {
+                if(e.target === helpOverlay) toggleHelp();
+            });
+            
+            // Grid click to go to slide
+            slides.forEach((slide, index) => {
+                slide.addEventListener('click', () => {
+                    if (document.body.classList.contains('grid-view')) {
+                        currentSlide = index;
+                        toggleGrid();
+                        updateSlide();
+                    }
+                });
+            });
+            
+            // Keyboard Navigation
+            document.addEventListener('keydown', (e) => {
+                // Ignore if in input field
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                
+                switch (e.key) {
+                    case 'ArrowRight':
+                    case ' ':
+                    case 'PageDown':
+                        e.preventDefault();
+                        if (!document.body.classList.contains('grid-view') && !helpOverlay.classList.contains('active')) nextSlide();
+                        break;
+                    case 'ArrowLeft':
+                    case 'PageUp':
+                        e.preventDefault();
+                        if (!document.body.classList.contains('grid-view') && !helpOverlay.classList.contains('active')) prevSlide();
+                        break;
+                    case 'Home':
+                        e.preventDefault();
+                        currentSlide = 0;
+                        updateSlide();
+                        break;
+                    case 'End':
+                        e.preventDefault();
+                        currentSlide = totalSlides - 1;
+                        updateSlide();
+                        break;
+                    case 'g':
+                    case 'G':
+                        e.preventDefault();
+                        toggleGrid();
+                        break;
+                    case '?':
+                        e.preventDefault();
+                        toggleHelp();
+                        break;
+                    case 'Escape':
+                        if (helpOverlay.classList.contains('active')) {
+                            toggleHelp();
+                        } else if (document.body.classList.contains('grid-view')) {
+                            toggleGrid();
+                        }
+                        break;
+                }
+            });
+            
+            // Initialize
+            updateSlide();
+        });
+    </script>
+</body>
+</html>

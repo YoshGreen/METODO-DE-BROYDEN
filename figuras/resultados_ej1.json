@@ -1,0 +1,24 @@
+{
+  "newton": {
+    "iteraciones": 4,
+    "evals_F": 5,
+    "evals_J": 4,
+    "norma_final": 2.5234468162727662e-12,
+    "convergio": true
+  },
+  "broyden": {
+    "iteraciones": 7,
+    "evals_F": 8,
+    "evals_J": 1,
+    "norma_final": 7.26627108894167e-11,
+    "convergio": true
+  },
+  "solucion": [
+    1.9318516525789344,
+    0.5176380902042443
+  ],
+  "x0": [
+    2.5,
+    0.5
+  ]
+}

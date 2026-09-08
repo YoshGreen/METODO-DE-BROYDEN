@@ -1,0 +1,18 @@
+{
+  "newton": {
+    "iteraciones": 30,
+    "evals_F": 31,
+    "tasas_finales": [
+      -2.89592894594815
+    ]
+  },
+  "broyden": {
+    "iteraciones": 28,
+    "evals_F": 29,
+    "tasas_finales": [
+      1.4622917653486347,
+      1.1775889244747697,
+      1.2281264337951159
+    ]
+  }
+}
