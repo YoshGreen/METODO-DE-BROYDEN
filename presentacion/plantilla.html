@@ -680,6 +680,8 @@ figcaption .fig-n{color:var(--broyden);}
 
       <div class="eq gold">\[ B_{k+1} = B_k + \frac{(\mathbf{y}_k - B_k \mathbf{s}_k)\,\mathbf{s}_k^{T}}{\mathbf{s}_k^{T}\mathbf{s}_k} \]</div>
 
+      <div class="eq gold">\[ A^{(k)} = A^{(k-1)} + \frac{[\Delta F(X^{(k)}) - A^{(k-1)}\Delta X^{(k)}]\,(\Delta X^{(k)})^t}{\|\Delta X^{(k)}\|_2^2} \]</div>
+
       <ul>
         <li>Es una actualización de <strong>rango 1</strong>: un producto exterior vectorial.</li>
         <li>Modifica \( B_k \) únicamente en la dirección del último paso \( \mathbf{s}_k \).</li>
