@@ -77,7 +77,7 @@ def main():
     doc.espacio(200)
     doc.texto("**Materia:** Métodos Numéricos II, DAT-252", jc="center", sz=24)
     doc.texto("**Docente:** M.Sc. Carlos Mullisaca Choque", jc="center", sz=24)
-    doc.texto("**Estudiantes:** [Integrante 1], [Integrante 2]", jc="center", sz=24)
+    doc.texto("**Estudiantes:** Cordova Avendaño Yoshua Aaron\nSempertegui Flores Erick Sebastian", jc="center", sz=24)
     doc.espacio(600)
     doc.texto("Fecha: La Paz, Bolivia — Septiembre de 2026", jc="center", sz=24)
     
